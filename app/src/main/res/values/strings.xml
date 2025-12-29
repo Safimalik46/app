@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AI App Detector</string>
+    <string name="app_tagline">Smart AI Security for Your Apps</string>
+    
+    <!-- Splash Screen -->
+    <string name="splash_loading">Loading Security Scanner…</string>
+    
+    <!-- Home Screen -->
+    <string name="home_title">AI-Based Suspicious App Detector</string>
+    <string name="home_description">Protect your device by analyzing installed applications. Our AI-powered scanner detects potentially risky apps based on permissions and behavior patterns.</string>
+    <string name="scan_apps_button">Scan Installed Apps</string>
+    <string name="antivirus_scan">Antivirus Scan</string>
+    <string name="file_cleaner">File Cleaner</string>
+    
+    <!-- App Scan Screen -->
+    <string name="scan_title">Installed Apps</string>
+    <string name="scan_analyze">Analyze</string>
+    <string name="permissions_count">%1$d permissions</string>
+    
+    <!-- Analysis Screen -->
+    <string name="analyzing">Analyzing App Security…</string>
+    <string name="analysis_complete">Analysis Complete</string>
+    
+    <!-- Result Screen -->
+    <string name="result_title">Security Analysis Result</string>
+    <string name="risk_level_safe">Safe</string>
+    <string name="risk_level_risky">Risky</string>
+    <string name="risk_level_malware">Malware</string>
+    <string name="dangerous_permissions">Dangerous Permissions</string>
+    <string name="security_recommendation">Security Recommendation</string>
+    <string name="recommendation_safe">This app is safe to use. Continue using it normally.</string>
+    <string name="recommendation_risky">This app requests sensitive permissions. Consider limiting permissions in app settings.</string>
+    <string name="recommendation_malware">Uninstall recommended. This app shows signs of malicious behavior.</string>
+    
+    <!-- Common -->
+    <string name="loading">Loading…</string>
+    <string name="error">An error occurred</string>
+    <string name="retry">Retry</string>
+    <string name="back">Back</string>
+</resources>
+
