@@ -191,7 +191,7 @@ class FileCleanerActivity : AppCompatActivity() {
         vtResult: VirusTotalResult?
     ) {
         var fileText = "⚠️ ${file.name}\n   Size: ${file.length()} bytes\n   Path: ${file.parent}"
-        
+        //Virus total Api
         if (vtResult != null) {
             if (vtResult.isThreat()) {
                 fileText += "\n   🚨 VirusTotal: ${vtResult.verdict}"
