@@ -12,7 +12,7 @@ import com.security.appdetector.util.VirusTotalApi
 import com.security.appdetector.util.VirusTotalResult
 import com.security.appdetector.util.GoogleSafeBrowsingApi
 import com.security.appdetector.util.SafeBrowsingResult
-import com.security.appdetector.util.OpenAISecurityApi
+import com.security.appdetector.util.PlayStoreVerifier
 import java.io.File
 import java.security.MessageDigest
 import kotlin.math.max
@@ -61,37 +61,46 @@ class SecurityScanner(private val context: Context) {
         val fileSystemAnalysis = analyzeFileSystem()
         val antivirusAnalysis = performAntivirusScan(appInfo)
 
-        // Try AI-powered analysis if OpenAI is configured
-        var aiAnalysis: RiskLevel? = null
-        if (OpenAISecurityApi.isApiKeyConfigured(context)) {
+        // Check Play Store verification - mark non-Play Store apps as risky
+        val playStoreAnalysis = checkPlayStoreVerification(appInfo)
+        
+        // Try VirusTotal API analysis if configured (replacing OpenAI)
+        var virusTotalAnalysis: RiskLevel? = null
+        if (VirusTotalApi.isApiKeyConfigured(context)) {
             try {
-                val aiResult = OpenAISecurityApi.analyzeAppSecurity(
-                    context,
-                    appInfo.appName,
-                    appInfo.packageName,
-                    appInfo.permissions,
-                    appInfo.dangerousPermissions
-                )
-                if (aiResult != null) {
-                    aiAnalysis = when (aiResult.riskLevel.uppercase()) {
-                        "MALWARE" -> RiskLevel.MALWARE
-                        "RISKY" -> RiskLevel.RISKY
-                        else -> RiskLevel.SAFE
+                val packageManager = context.packageManager
+                val packageInfo = packageManager.getPackageInfo(appInfo.packageName, 0)
+                val appFile = java.io.File(packageInfo.applicationInfo.sourceDir)
+                
+                if (appFile.exists()) {
+                    val vtResult = VirusTotalApi.scanFile(context, appFile)
+                    if (vtResult != null && vtResult.isThreat()) {
+                        virusTotalAnalysis = when {
+                            vtResult.malicious > 5 -> RiskLevel.MALWARE
+                            vtResult.malicious > 0 || vtResult.suspicious > 3 -> RiskLevel.RISKY
+                            else -> null
+                        }
                     }
                 }
             } catch (e: Exception) {
-                // Fall through if AI analysis fails
+                // Fall through if VirusTotal analysis fails
             }
         }
 
-        // Combine all analysis results (include AI if available)
-        val overallRisk = if (aiAnalysis != null) {
-            determineOverallRisk(permissionAnalysis, behavioralAnalysis,
-                              fileSystemAnalysis, antivirusAnalysis, aiAnalysis)
-        } else {
-            determineOverallRisk(permissionAnalysis, behavioralAnalysis,
-                              fileSystemAnalysis, antivirusAnalysis)
+        // Combine all analysis results
+        val analysisList = mutableListOf(
+            permissionAnalysis, 
+            behavioralAnalysis,
+            fileSystemAnalysis, 
+            antivirusAnalysis,
+            playStoreAnalysis
+        )
+        
+        if (virusTotalAnalysis != null) {
+            analysisList.add(virusTotalAnalysis)
         }
+        
+        val overallRisk = determineOverallRisk(*analysisList.toTypedArray())
         val confidence = calculateOverallConfidence(overallRisk)
         val recommendation = generateRecommendation(overallRisk, appInfo)
 
@@ -142,22 +151,39 @@ class SecurityScanner(private val context: Context) {
             val isSystemApp = (packageInfo.applicationInfo.flags and
                 android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
 
-            // Check installation source
-            val isFromUnknownSource = packageInfo.applicationInfo.sourceDir?.contains("unknown") == true
-
             // Check if app requests many permissions but has few features (suspicious)
             val permissionRatio = if (appInfo.permissionCount > 0) {
                 appInfo.dangerousPermissionCount.toFloat() / appInfo.permissionCount
             } else 0f
 
             return when {
-                isFromUnknownSource && appInfo.dangerousPermissionCount >= 3 -> RiskLevel.MALWARE
                 permissionRatio > 0.7f && appInfo.dangerousPermissionCount >= 4 -> RiskLevel.RISKY
                 isSystemApp -> RiskLevel.SAFE // System apps are generally safe
                 else -> RiskLevel.SAFE
             }
         } catch (e: Exception) {
             return RiskLevel.SAFE // Default to safe if analysis fails
+        }
+    }
+    
+    /**
+     * Checks Play Store verification - marks non-Play Store apps as risky
+     */
+    private fun checkPlayStoreVerification(appInfo: AppInfo): RiskLevel {
+        return try {
+            val isFromPlayStore = PlayStoreVerifier.isFromPlayStore(context, appInfo.packageName)
+            val isSystemOrGoogle = PlayStoreVerifier.isSystemOrGoogleApp(context, appInfo.packageName)
+            val isFromUnknownSource = PlayStoreVerifier.isFromUnknownSource(context, appInfo.packageName)
+            
+            when {
+                isSystemOrGoogle -> RiskLevel.SAFE // System/Google apps are safe
+                isFromPlayStore -> RiskLevel.SAFE // From Play Store is safe
+                isFromUnknownSource && appInfo.dangerousPermissionCount >= 2 -> RiskLevel.RISKY // APK with dangerous perms
+                isFromUnknownSource -> RiskLevel.RISKY // APK from unknown source
+                else -> RiskLevel.SAFE // Default safe
+            }
+        } catch (e: Exception) {
+            RiskLevel.SAFE
         }
     }
 
