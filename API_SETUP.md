@@ -16,7 +16,7 @@ VirusTotal provides real-time malware detection using 70+ antivirus engines.
 
 ### Free Tier Limits:
 - 500 requests per day
-- 4 requests per minute
+- 4 requests per minute.
 
 ## 2. Google Safe Browsing API (Optional)
 
