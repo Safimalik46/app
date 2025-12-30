@@ -9,6 +9,7 @@ import com.security.appdetector.adapter.PermissionListAdapter
 import com.security.appdetector.databinding.ActivityResultDetailBinding
 import com.security.appdetector.model.RiskLevel
 import com.security.appdetector.util.AppScanner
+import com.security.appdetector.util.PlayStoreVerifier
 
 /**
  * Activity that displays detailed analysis results for an app
@@ -47,9 +48,10 @@ class ResultDetailActivity : AppCompatActivity() {
             binding.appIconDetail.setImageDrawable(it.icon)
         }
 
-        // Set app name and package
+        // Set app name and package with installation source
         binding.appNameDetail.text = appName
-        binding.packageNameDetail.text = packageName
+        val installationSource = PlayStoreVerifier.getInstallationSource(this, packageName)
+        binding.packageNameDetail.text = "$packageName\nSource: $installationSource"
 
         // Set risk level with appropriate color
         val riskLevel = RiskLevel.valueOf(riskLevelStr)

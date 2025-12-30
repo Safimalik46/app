@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+    <uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
 
     <application
         android:allowBackup="true"
@@ -59,6 +63,14 @@
 
         <activity
             android:name=".ChatbotActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".FileScanActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".GmailPhishingActivity"
             android:exported="false" />
     </application>
 

@@ -33,10 +33,24 @@
     <string name="recommendation_risky">This app requests sensitive permissions. Consider limiting permissions in app settings.</string>
     <string name="recommendation_malware">Uninstall recommended. This app shows signs of malicious behavior.</string>
     
+    <!-- File Scanning -->
+    <string name="file_scanner">File Scanner</string>
+    <string name="scan_apk_files">Scan APK Files</string>
+    <string name="scan_downloads">Scan Downloads</string>
+    <string name="scan_custom_file">Custom File</string>
+    <string name="scan_all_files">Scan All</string>
+    
+    <!-- Gmail Phishing -->
+    <string name="gmail_phishing_scanner">Gmail Phishing Scanner</string>
+    <string name="connect_gmail">Connect Gmail</string>
+    <string name="scan_inbox">Scan Inbox</string>
+    <string name="phishing_detected">Phishing Detected</string>
+    
     <!-- Common -->
     <string name="loading">Loading…</string>
     <string name="error">An error occurred</string>
     <string name="retry">Retry</string>
     <string name="back">Back</string>
+    <string name="security_statistics">Security Statistics</string>
 </resources>
 
