@@ -164,7 +164,7 @@
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
                 </LinearLayout>
 
-                <!-- OpenAI API -->
+                <!-- Gemini API (Replaces OpenAI) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -180,12 +180,12 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="OpenAI AI Security"
+                            android:text="Google Gemini AI"
                             android:textColor="@color/text_black"
                             android:textSize="16sp" />
 
                         <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/enableOpenAiSwitch"
+                            android:id="@+id/enableGeminiSwitch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
                     </LinearLayout>
@@ -194,18 +194,18 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="OpenAI API Key"
+                        android:hint="Gemini API Key"
                         app:passwordToggleEnabled="true">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/openAiApiKeyEdit"
+                            android:id="@+id/geminiApiKeyEdit"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textPassword" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/testOpenAiButton"
+                        android:id="@+id/testGeminiButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Test Connection"
@@ -303,4 +303,3 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>
-

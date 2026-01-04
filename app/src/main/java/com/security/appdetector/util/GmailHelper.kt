@@ -3,22 +3,24 @@ package com.security.appdetector.util
 import android.accounts.Account
 import android.content.Context
 import android.util.Log
+import com.google.api.client.extensions.android.http.AndroidHttp
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.json.gson.GsonFactory
+import com.google.api.services.gmail.Gmail
+import com.google.api.services.gmail.GmailScopes
 import com.security.appdetector.model.EmailScanResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.Collections
 
 /**
  * Helper class for Gmail integration
- * Uses Android AccountManager for Gmail account access
+ * Uses Gmail API to fetch emails for scanning
  */
 object GmailHelper {
     
     private const val TAG = "GmailHelper"
-    private const val GMAIL_ACCOUNT_TYPE = "com.google"
+    private const val APPLICATION_NAME = "Suspicious App Detector"
     
     /**
      * Get Gmail account from device
@@ -69,46 +71,118 @@ object GmailHelper {
             null
         }
     }
-    
+
     /**
      * Check if Gmail account is available
      */
     fun hasGmailAccount(context: Context): Boolean {
         return getGmailAccount(context) != null
     }
+
+    /**
+     * Get Gmail service instance
+     */
+    fun getGmailService(context: Context, account: Account): Gmail? {
+        return try {
+            val credential = GoogleAccountCredential.usingOAuth2(
+                context, Collections.singleton(GmailScopes.GMAIL_READONLY)
+            )
+            credential.selectedAccount = account
+            
+            Gmail.Builder(
+                AndroidHttp.newCompatibleTransport(),
+                GsonFactory.getDefaultInstance(),
+                credential
+            )
+            .setApplicationName(APPLICATION_NAME)
+            .build()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating Gmail service: ${e.message}")
+            null
+        }
+    }
     
     /**
-     * Fetch emails from Gmail using IMAP-like approach
-     * Note: Full Gmail API requires OAuth2 setup
-     * This is a simplified implementation using available Android APIs
+     * Fetch emails from Gmail API
      */
-    suspend fun fetchGmailEmails(context: Context, maxEmails: Int = 50): List<EmailScanResult> = withContext(Dispatchers.IO) {
-        val emails = mutableListOf<EmailScanResult>()
+    suspend fun fetchGmailEmails(context: Context, account: Account, maxResults: Long = 20): List<EmailScanResult> = withContext(Dispatchers.IO) {
+        val results = mutableListOf<EmailScanResult>()
         
         try {
-            val account = getGmailAccount(context)
-            if (account == null) {
-                Log.w(TAG, "No Gmail account found")
-                return@withContext emails
+            val service = getGmailService(context, account) ?: return@withContext results
+            
+            // List messages
+            val listResponse = service.users().messages().list("me")
+                .setMaxResults(maxResults)
+                .setQ("category:primary") // Focus on primary inbox
+                .execute()
+                
+            val messages = listResponse.messages
+            if (messages != null) {
+                for (message in messages) {
+                    try {
+                        // Get full message details
+                        val fullMessage = service.users().messages().get("me", message.id)
+                            .setFormat("full")
+                            .execute()
+                            
+                        val headers = fullMessage.payload.headers
+                        val subject = headers.find { it.name.equals("Subject", ignoreCase = true) }?.value ?: "(No Subject)"
+                        val sender = headers.find { it.name.equals("From", ignoreCase = true) }?.value ?: "Unknown"
+                        val date = headers.find { it.name.equals("Date", ignoreCase = true) }?.value?.toLongOrNull() ?: System.currentTimeMillis()
+                        
+                        val snippet = fullMessage.snippet ?: ""
+                        
+                        // Basic phishing detection logic
+                        val isPhishing = checkForPhishing(subject, sender, snippet)
+                        
+                        results.add(EmailScanResult(
+                            id = message.id,
+                            sender = sender,
+                            subject = subject,
+                            preview = snippet,
+                            date = date,
+                            isPhishing = isPhishing,
+                            threatLevel = if (isPhishing) "HIGH" else "LOW"
+                        ))
+                        
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching message ${message.id}: ${e.message}")
+                    }
+                }
             }
             
-            // Note: Full Gmail API access requires OAuth2 credentials
-            // For now, we'll use a fallback approach that reads from device
-            // In production, implement full Gmail API with OAuth2
-            
-            // This would normally use Gmail API:
-            // val service = Gmail.Builder(...).build()
-            // val messages = service.users().messages().list("me").setMaxResults(maxEmails.toLong()).execute()
-            
-            // For demonstration, we return empty list and let the UI handle it
-            // Real implementation would parse Gmail API response here
-            Log.d(TAG, "Gmail account found: ${account.name}")
-            
         } catch (e: Exception) {
-            Log.e(TAG, "Error fetching Gmail emails: ${e.message}")
+            Log.e(TAG, "Gmail API Error: ${e.message}")
+            // In a real app, you would handle specific API errors (e.g., auth required)
         }
         
-        emails
+        results
+    }
+    
+    /**
+     * Simple phishing detection logic
+     */
+    private fun checkForPhishing(subject: String, sender: String, body: String): Boolean {
+        val suspiciousKeywords = listOf(
+            "verify your account", "urgent action required", "suspicious activity",
+            "account suspended", "lottery winner", "inheritance", "bank transfer",
+            "password expiration", "unusual sign-in"
+        )
+        
+        val content = "$subject $sender $body".lowercase()
+        
+        // Check for suspicious keywords
+        if (suspiciousKeywords.any { content.contains(it) }) {
+            return true
+        }
+        
+        // Check for mismatched sender domains for known services (simplified)
+        if (content.contains("paypal") && !sender.lowercase().contains("paypal.com")) return true
+        if (content.contains("google") && !sender.lowercase().contains("google.com")) return true
+        if (content.contains("apple") && !sender.lowercase().contains("apple.com")) return true
+        if (content.contains("bank") && sender.lowercase().contains("gmail.com")) return true // Banks usually don't use gmail
+        
+        return false
     }
 }
-

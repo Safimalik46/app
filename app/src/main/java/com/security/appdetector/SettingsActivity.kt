@@ -45,8 +45,8 @@ class SettingsActivity : AppCompatActivity() {
             testSafeBrowsingApi()
         }
 
-        binding.testOpenAiButton.setOnClickListener {
-            testOpenAIApi()
+        binding.testGeminiButton.setOnClickListener {
+            testGeminiApi()
         }
 
         // Enable/Disable toggles
@@ -60,9 +60,9 @@ class SettingsActivity : AppCompatActivity() {
             binding.testSafeBrowsingButton.isEnabled = isChecked
         }
 
-        binding.enableOpenAiSwitch.setOnCheckedChangeListener { _, isChecked ->
-            binding.openAiApiKeyEdit.isEnabled = isChecked
-            binding.testOpenAiButton.isEnabled = isChecked
+        binding.enableGeminiSwitch.setOnCheckedChangeListener { _, isChecked ->
+            binding.geminiApiKeyEdit.isEnabled = isChecked
+            binding.testGeminiButton.isEnabled = isChecked
         }
 
         binding.enableRealTimeScanSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -82,24 +82,24 @@ class SettingsActivity : AppCompatActivity() {
         binding.safeBrowsingApiKeyEdit.setText(
             sharedPreferences.getString("safebrowsing_api_key", "") ?: ""
         )
-        binding.openAiApiKeyEdit.setText(
-            sharedPreferences.getString("openai_api_key", "") ?: ""
+        binding.geminiApiKeyEdit.setText(
+            sharedPreferences.getString("gemini_api_key", "") ?: ""
         )
 
         // Load toggle states
         binding.enableVirusTotalSwitch.isChecked = sharedPreferences.getBoolean("enable_virustotal", false)
         binding.enableSafeBrowsingSwitch.isChecked = sharedPreferences.getBoolean("enable_safebrowsing", false)
-        binding.enableOpenAiSwitch.isChecked = sharedPreferences.getBoolean("enable_openai", false)
+        binding.enableGeminiSwitch.isChecked = sharedPreferences.getBoolean("enable_gemini", true)
         binding.enableRealTimeScanSwitch.isChecked = sharedPreferences.getBoolean("enable_realtime_scan", true)
         binding.enableAutoCleanSwitch.isChecked = sharedPreferences.getBoolean("enable_auto_clean", false)
 
         // Enable/disable fields based on toggles
         binding.virusTotalApiKeyEdit.isEnabled = binding.enableVirusTotalSwitch.isChecked
         binding.safeBrowsingApiKeyEdit.isEnabled = binding.enableSafeBrowsingSwitch.isChecked
-        binding.openAiApiKeyEdit.isEnabled = binding.enableOpenAiSwitch.isChecked
+        binding.geminiApiKeyEdit.isEnabled = binding.enableGeminiSwitch.isChecked
         binding.testVirusTotalButton.isEnabled = binding.enableVirusTotalSwitch.isChecked
         binding.testSafeBrowsingButton.isEnabled = binding.enableSafeBrowsingSwitch.isChecked
-        binding.testOpenAiButton.isEnabled = binding.enableOpenAiSwitch.isChecked
+        binding.testGeminiButton.isEnabled = binding.enableGeminiSwitch.isChecked
     }
 
     private fun saveSettings() {
@@ -108,12 +108,12 @@ class SettingsActivity : AppCompatActivity() {
         // Save API keys
         editor.putString("virustotal_api_key", binding.virusTotalApiKeyEdit.text.toString().trim())
         editor.putString("safebrowsing_api_key", binding.safeBrowsingApiKeyEdit.text.toString().trim())
-        editor.putString("openai_api_key", binding.openAiApiKeyEdit.text.toString().trim())
+        editor.putString("gemini_api_key", binding.geminiApiKeyEdit.text.toString().trim())
 
         // Save toggle states
         editor.putBoolean("enable_virustotal", binding.enableVirusTotalSwitch.isChecked)
         editor.putBoolean("enable_safebrowsing", binding.enableSafeBrowsingSwitch.isChecked)
-        editor.putBoolean("enable_openai", binding.enableOpenAiSwitch.isChecked)
+        editor.putBoolean("enable_gemini", binding.enableGeminiSwitch.isChecked)
         editor.putBoolean("enable_realtime_scan", binding.enableRealTimeScanSwitch.isChecked)
         editor.putBoolean("enable_auto_clean", binding.enableAutoCleanSwitch.isChecked)
 
@@ -131,7 +131,8 @@ class SettingsActivity : AppCompatActivity() {
 
         Toast.makeText(this, "Testing VirusTotal API...", Toast.LENGTH_SHORT).show()
         // Test would be implemented in API utility
-        Toast.makeText(this, "VirusTotal API test completed", Toast.LENGTH_SHORT).show()
+        // For now just show success if key is present
+        Toast.makeText(this, "VirusTotal API configuration saved", Toast.LENGTH_SHORT).show()
     }
 
     private fun testSafeBrowsingApi() {
@@ -142,18 +143,17 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         Toast.makeText(this, "Testing Safe Browsing API...", Toast.LENGTH_SHORT).show()
-        Toast.makeText(this, "Safe Browsing API test completed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Safe Browsing API configuration saved", Toast.LENGTH_SHORT).show()
     }
 
-    private fun testOpenAIApi() {
-        val apiKey = binding.openAiApiKeyEdit.text.toString().trim()
+    private fun testGeminiApi() {
+        val apiKey = binding.geminiApiKeyEdit.text.toString().trim()
         if (apiKey.isEmpty()) {
-            Toast.makeText(this, "Please enter OpenAI API key", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please enter Gemini API key", Toast.LENGTH_SHORT).show()
             return
         }
 
-        Toast.makeText(this, "Testing OpenAI API...", Toast.LENGTH_SHORT).show()
-        Toast.makeText(this, "OpenAI API test completed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Testing Gemini API...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Gemini API configuration saved", Toast.LENGTH_SHORT).show()
     }
 }
-

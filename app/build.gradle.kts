@@ -92,9 +92,11 @@ dependencies {
     implementation("com.google.apis:google-api-services-gmail:v1-rev20220404-2.0.0")
     implementation("com.google.auth:google-auth-library-oauth2-http:1.19.0")
     
+    // Gemini AI
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
-

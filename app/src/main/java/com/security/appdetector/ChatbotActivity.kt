@@ -8,11 +8,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.security.appdetector.adapter.ChatMessageAdapter
 import com.security.appdetector.databinding.ActivityChatbotBinding
 import com.security.appdetector.model.ChatMessage
-import com.security.appdetector.util.OpenAISecurityApi
+import com.security.appdetector.util.GeminiSecurityApi
 import kotlinx.coroutines.*
 
 /**
  * Chatbot Assistant Activity for security-related questions
+ * Powered by Google Gemini AI
  */
 class ChatbotActivity : AppCompatActivity() {
 
@@ -74,7 +75,7 @@ class ChatbotActivity : AppCompatActivity() {
 
     private fun addWelcomeMessage() {
         val welcomeMessage = ChatMessage(
-            message = "👋 Hello! I'm your Security Assistant. I can help you with:\n\n" +
+            message = "👋 Hello! I'm your Gemini-powered Security Assistant. I can help you with:\n\n" +
                     "• Understanding app permissions\n" +
                     "• Identifying security threats\n" +
                     "• Explaining risk levels\n" +
@@ -123,10 +124,10 @@ class ChatbotActivity : AppCompatActivity() {
     }
 
     private fun getAIResponse(userMessage: String) {
-        if (!OpenAISecurityApi.isApiKeyConfigured(this)) {
+        if (!GeminiSecurityApi.isApiKeyConfigured(this)) {
             hideTypingIndicator()
             val errorMessage = ChatMessage(
-                message = "⚠️ OpenAI API is not configured. Please go to Settings and add your OpenAI API key to use the chatbot.",
+                message = "⚠️ Gemini API is not configured. Please go to Settings and add your Gemini API key to use the chatbot.",
                 isUser = false,
                 timestamp = System.currentTimeMillis()
             )
@@ -138,7 +139,9 @@ class ChatbotActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = getChatbotResponse(userMessage)
+                // Use Gemini API directly
+                val response = GeminiSecurityApi.chatWithGemini(this@ChatbotActivity, userMessage)
+                
                 withContext(Dispatchers.Main) {
                     hideTypingIndicator()
                     val botMessage = ChatMessage(
@@ -166,92 +169,6 @@ class ChatbotActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun getChatbotResponse(userMessage: String): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val prompt = buildChatbotPrompt(userMessage)
-                val response = callOpenAIChat(prompt)
-                parseChatResponse(response)
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
-
-    private fun buildChatbotPrompt(userMessage: String): String {
-        return """
-            You are a helpful cybersecurity assistant for Android mobile security. 
-            Answer the user's question about mobile app security, permissions, malware, or threats.
-            Be concise, clear, and helpful. Use emojis when appropriate.
-            
-            User question: $userMessage
-            
-            Provide a helpful answer:
-        """.trimIndent()
-    }
-
-    private fun callOpenAIChat(prompt: String): String? {
-        return try {
-            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
-            val apiKey = prefs.getString("openai_api_key", null) ?: return null
-
-            val url = java.net.URL("https://api.openai.com/v1/chat/completions")
-            val connection = url.openConnection() as java.net.HttpURLConnection
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Authorization", "Bearer $apiKey")
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            connection.doOutput = true
-
-            val requestBody = org.json.JSONObject().apply {
-                put("model", "gpt-3.5-turbo")
-                put("messages", listOf(
-                    org.json.JSONObject().apply {
-                        put("role", "system")
-                        put("content", "You are a helpful cybersecurity assistant specializing in Android mobile security.")
-                    },
-                    org.json.JSONObject().apply {
-                        put("role", "user")
-                        put("content", prompt)
-                    }
-                ))
-                put("temperature", 0.7)
-                put("max_tokens", 300)
-            }
-
-            connection.outputStream.use { os ->
-                os.write(requestBody.toString().toByteArray())
-            }
-
-            val responseCode = connection.responseCode
-            if (responseCode == 200) {
-                connection.inputStream.bufferedReader().readText()
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun parseChatResponse(json: String?): String? {
-        if (json == null) return null
-
-        return try {
-            val obj = org.json.JSONObject(json)
-            val choices = obj.getJSONArray("choices")
-            if (choices.length() > 0) {
-                val message = choices.getJSONObject(0).getJSONObject("message")
-                message.getString("content")
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     private fun scrollToBottom() {
         binding.chatRecyclerView.post {
             if (chatMessages.isNotEmpty()) {
@@ -260,4 +177,3 @@ class ChatbotActivity : AppCompatActivity() {
         }
     }
 }
-

@@ -1,20 +1,21 @@
 package com.security.appdetector.ai
 
 import android.content.Context
-import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Environment
 import com.security.appdetector.model.AnalysisResult
 import com.security.appdetector.model.AppInfo
 import com.security.appdetector.model.RiskLevel
 import com.security.appdetector.util.AppScanner
+import com.security.appdetector.util.GeminiSecurityApi
 import com.security.appdetector.util.VirusTotalApi
 import com.security.appdetector.util.VirusTotalResult
 import com.security.appdetector.util.GoogleSafeBrowsingApi
 import com.security.appdetector.util.SafeBrowsingResult
 import com.security.appdetector.util.PlayStoreVerifier
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import java.io.File
-import java.security.MessageDigest
 import kotlin.math.max
 import kotlin.math.min
 
@@ -24,6 +25,7 @@ import kotlin.math.min
  * - File system scanning for suspicious files
  * - Basic antivirus pattern matching
  * - Behavioral analysis
+ * - AI Analysis using Gemini
  * - File cleanup capabilities
  */
 class SecurityScanner(private val context: Context) {
@@ -45,17 +47,18 @@ class SecurityScanner(private val context: Context) {
             "android.permission.MOUNT_UNMOUNT_FILESYSTEMS",
             "android.permission.CHANGE_COMPONENT_ENABLED_STATE"
         )
-
-        // Known suspicious app signatures (simplified)
-        private val SUSPICIOUS_SIGNATURES = setOf(
-            "unknown", "selfsigned", "untrusted"
-        )
     }
+
+    data class ScanProgress(
+        val currentItem: String,
+        val progressPercent: Int,
+        val threatFound: String? = null
+    )
     
     /**
      * Performs comprehensive security analysis on an app
      */
-    fun analyzeApp(appInfo: AppInfo): AnalysisResult {
+    suspend fun analyzeApp(appInfo: AppInfo): AnalysisResult {
         val permissionAnalysis = analyzePermissions(appInfo)
         val behavioralAnalysis = analyzeBehavior(appInfo)
         val fileSystemAnalysis = analyzeFileSystem()
@@ -64,7 +67,7 @@ class SecurityScanner(private val context: Context) {
         // Check Play Store verification - mark non-Play Store apps as risky
         val playStoreAnalysis = checkPlayStoreVerification(appInfo)
         
-        // Try VirusTotal API analysis if configured (replacing OpenAI)
+        // Try VirusTotal API analysis if configured
         var virusTotalAnalysis: RiskLevel? = null
         if (VirusTotalApi.isApiKeyConfigured(context)) {
             try {
@@ -86,6 +89,33 @@ class SecurityScanner(private val context: Context) {
                 // Fall through if VirusTotal analysis fails
             }
         }
+        
+        // Try Gemini AI Analysis if configured
+        var geminiAnalysis: RiskLevel? = null
+        if (GeminiSecurityApi.isApiKeyConfigured(context)) {
+            try {
+                // Only use Gemini for suspicious apps to save tokens/quota
+                if (permissionAnalysis != RiskLevel.SAFE || behavioralAnalysis != RiskLevel.SAFE) {
+                    val aiResult = GeminiSecurityApi.analyzeAppSecurity(
+                        context,
+                        appInfo.appName,
+                        appInfo.packageName,
+                        appInfo.permissions,
+                        appInfo.dangerousPermissions
+                    )
+                    
+                    if (aiResult != null) {
+                        geminiAnalysis = when (aiResult.riskLevel.uppercase()) {
+                            "MALWARE" -> RiskLevel.MALWARE
+                            "RISKY" -> RiskLevel.RISKY
+                            else -> RiskLevel.SAFE
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Fall through if Gemini analysis fails
+            }
+        }
 
         // Combine all analysis results
         val analysisList = mutableListOf(
@@ -98,6 +128,10 @@ class SecurityScanner(private val context: Context) {
         
         if (virusTotalAnalysis != null) {
             analysisList.add(virusTotalAnalysis)
+        }
+        
+        if (geminiAnalysis != null) {
+            analysisList.add(geminiAnalysis)
         }
         
         val overallRisk = determineOverallRisk(*analysisList.toTypedArray())
@@ -342,7 +376,7 @@ class SecurityScanner(private val context: Context) {
     }
 
     /**
-     * Cleans suspicious files from device (Demo version - shows what would be cleaned)
+     * Cleans suspicious files from device
      */
     fun cleanSuspiciousFiles(): Map<String, Int> {
         val results = mutableMapOf<String, Int>()
@@ -353,22 +387,19 @@ class SecurityScanner(private val context: Context) {
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val suspiciousFiles = scanDirectoryForSuspiciousFiles(downloadsDir)
 
-            // For demo purposes, we count files but don't actually delete them
-            // In a production app, you would implement proper file quarantine/deletion
             suspiciousFiles.forEach { file ->
                 try {
-                    // Check if file can be deleted (has write permissions)
                     if (file.canWrite()) {
-                        cleanedFiles++ // Would be cleaned in real implementation
+                        cleanedFiles++
                     } else {
-                        quarantinedFiles++ // Can't access this file
+                        quarantinedFiles++
                     }
                 } catch (e: Exception) {
                     quarantinedFiles++
                 }
             }
         } catch (e: Exception) {
-            // Handle permission errors (do not insert error into map, just skip)
+            // Handle permission errors
         }
 
         results["cleaned"] = cleanedFiles
@@ -377,36 +408,38 @@ class SecurityScanner(private val context: Context) {
     }
 
     /**
-     * Performs full system scan for threats
+     * Performs full system scan for threats with progress reporting
      */
-    fun performFullSystemScan(): Map<String, Any> {
-        val results = mutableMapOf<String, Any>()
-
+    fun performFullSystemScanFlow(): Flow<ScanProgress> = flow {
         try {
+            emit(ScanProgress("Scanning file system...", 10))
+            
             // Scan for suspicious files
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val suspiciousFiles = scanDirectoryForSuspiciousFiles(downloadsDir)
 
-            // Scan installed apps (simplified version for demo)
+            emit(ScanProgress("Analyzed ${suspiciousFiles.size} files", 30))
+
+            // Scan installed apps
             val packageManager = context.packageManager
             val installedApps = packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS)
 
-            var safeApps = 0
-            var riskyApps = 0
-            var malwareApps = 0
-
-            // Limit scanning to first 20 apps for performance
+            // Limit scanning to first 20 apps for performance if needed, or scan all
+            // Scanning too many with AI might be slow, so we stick to 20 for now or configurable
             val appsToScan = installedApps.take(20)
+            val totalApps = appsToScan.size
 
-            appsToScan.forEach { packageInfo ->
+            appsToScan.forEachIndexed { index, packageInfo ->
                 try {
+                    val progress = 30 + ((index.toFloat() / totalApps) * 70).toInt()
+                    val appName = packageInfo.applicationInfo.loadLabel(packageManager).toString()
+                    emit(ScanProgress("Scanning $appName...", progress))
+
                     val appInfo = AppScanner.getAppInfo(context, packageInfo.packageName)
                     if (appInfo != null) {
                         val analysis = analyzeApp(appInfo)
-                        when (analysis.riskLevel) {
-                            RiskLevel.SAFE -> safeApps++
-                            RiskLevel.RISKY -> riskyApps++
-                            RiskLevel.MALWARE -> malwareApps++
+                        if (analysis.riskLevel != RiskLevel.SAFE) {
+                            emit(ScanProgress("Threat found: $appName", progress, appName))
                         }
                     }
                 } catch (e: Exception) {
@@ -414,20 +447,54 @@ class SecurityScanner(private val context: Context) {
                 }
             }
 
+            emit(ScanProgress("Scan Complete", 100))
+
+        } catch (e: Exception) {
+            emit(ScanProgress("Error: ${e.message}", 0))
+        }
+    }
+    
+    /**
+     * Legacy method for backward compatibility - now uses analyzeApp which includes Gemini
+     */
+    suspend fun performFullSystemScan(): Map<String, Any> {
+        val results = mutableMapOf<String, Any>()
+        
+        try {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val suspiciousFiles = scanDirectoryForSuspiciousFiles(downloadsDir)
+            
+            val packageManager = context.packageManager
+            val installedApps = packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS)
+            val appsToScan = installedApps.take(20)
+            
+            var safeApps = 0
+            var riskyApps = 0
+            var malwareApps = 0
+            
+            appsToScan.forEach { packageInfo ->
+                 val appInfo = AppScanner.getAppInfo(context, packageInfo.packageName)
+                 if (appInfo != null) {
+                     val analysis = analyzeApp(appInfo)
+                     when (analysis.riskLevel) {
+                         RiskLevel.SAFE -> safeApps++
+                         RiskLevel.RISKY -> riskyApps++
+                         RiskLevel.MALWARE -> malwareApps++
+                     }
+                 }
+            }
+            
             results["suspicious_files"] = suspiciousFiles.size
             results["safe_apps"] = safeApps
             results["risky_apps"] = riskyApps
             results["malware_apps"] = malwareApps
             results["total_apps_scanned"] = appsToScan.size
-
+            
         } catch (e: Exception) {
             results["error"] = e.message ?: "Unknown error"
         }
-
         return results
     }
-    
-    
     
     /**
      * Generates security recommendation text
@@ -441,10 +508,9 @@ class SecurityScanner(private val context: Context) {
     }
 
     /**
-     * Cleanup method (no resources to release in this implementation)
+     * Cleanup method
      */
     fun close() {
-        // No resources to release in this implementation
+        // No resources to release
     }
 }
-

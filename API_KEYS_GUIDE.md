@@ -61,31 +61,51 @@ This guide will help you get free API keys for all the security features in the 
 
 ---
 
-## 3. 🤖 OpenAI API (PAID - For AI Chatbot & Analysis)
+## 3. ✨ Google Gemini API (FREE - For AI Chatbot & Analysis)
 
-**What it does:** Powers the AI chatbot assistant and provides AI-powered security analysis.
+**What it does:** Powers the AI chatbot assistant and provides AI-powered security analysis. Replaces OpenAI.
 
 ### Steps to Get API Key:
-1. Go to: **https://platform.openai.com/**
-2. Sign up or log in
-3. Go to: **https://platform.openai.com/api-keys**
-4. Click **"Create new secret key"**
-5. Name it (e.g., "Security App")
-6. Click **"Create secret key"**
-7. **⚠️ COPY IT IMMEDIATELY** - You won't see it again!
-8. Save it securely
+1. Go to: **https://aistudio.google.com/app/apikey**
+2. Sign in with your Google account
+3. Click **"Create API key"**
+4. Select your project (or create one)
+5. Click **"Create"**
+6. Copy your API key
 
-### Pricing:
-- 💰 **Pay-as-you-go** (very affordable)
-- 💰 **$0.002 per 1K tokens** (roughly $0.01 per 10 questions)
-- 💰 **$5 free credit** when you sign up (try it free!)
+### Free Tier Limits:
+- ✅ **60 requests per minute**
+- ✅ Free of charge for personal use (within limits)
 
 ### How to Use in App:
 1. Open app → Tap **"⚙️ Settings & APIs"**
-2. Toggle **"OpenAI AI Security"** ON
+2. Toggle **"Google Gemini AI"** ON
 3. Paste your API key
 4. Tap **"Test Connection"**
 5. Tap **"Save Settings"**
+
+---
+
+## 4. 📧 Gmail API (For Phishing Detection)
+
+**What it does:** Allows the app to scan your Gmail inbox for phishing emails.
+
+### Steps to Setup:
+1. Go to: **https://console.cloud.google.com/**
+2. Select your project
+3. Search for **"Gmail API"** and click **"Enable"**
+4. Go to **"Credentials"**
+5. Configure **OAuth Consent Screen**:
+   - User Type: **External** (for testing) or **Internal**
+   - Add Test Users (your email)
+6. Create Credentials → **OAuth Client ID** → **Android**
+7. Add your app's package name: `com.security.appdetector`
+8. Add your SHA-1 Certificate Fingerprint (from Android Studio Gradle signing report)
+   - Run Gradle task: `signingReport` to get SHA-1
+
+### Note:
+- Without this setup, the Gmail scan will fail or show limited results.
+- The app uses `GoogleAccountCredential` to authenticate.
 
 ---
 
@@ -98,7 +118,7 @@ This guide will help you get free API keys for all the security features in the 
 4. ✅ You now have full antivirus scanning!
 
 ### Full Setup (With AI):
-1. ✅ Get all 3 API keys (VirusTotal + Safe Browsing + OpenAI)
+1. ✅ Get all 3 API keys (VirusTotal + Safe Browsing + Gemini)
 2. ✅ Enable all in Settings
 3. ✅ You now have:
    - ✅ Real-time malware detection
@@ -126,20 +146,7 @@ This guide will help you get free API keys for all the security features in the 
 - Check your **internet connection**
 - Verify the API key is **correct**
 - For VirusTotal: Make sure you're not exceeding rate limits
-- For OpenAI: Check your account has credits
-
-### "OpenAI API Error"
-- Make sure you have **credits** in your OpenAI account
-- Check your **billing** is set up correctly
-
----
-
-## 💡 Tips
-
-1. **Start with free APIs first** (VirusTotal + Safe Browsing)
-2. **Add OpenAI later** if you want the chatbot feature
-3. **Monitor usage** in your API provider dashboards
-4. **Set up billing alerts** for OpenAI to avoid surprises
+- For Gemini: Check if the API key is active in Google AI Studio
 
 ---
 
@@ -150,6 +157,6 @@ Once you've added your API keys, the app will automatically use them for:
 - 🤖 **AI-powered security analysis**
 - 💬 **Smart chatbot assistant**
 - 🛡️ **Real-time threat scanning**
+- 📧 **Phishing detection**
 
 Enjoy your secure mobile experience! 🚀
-

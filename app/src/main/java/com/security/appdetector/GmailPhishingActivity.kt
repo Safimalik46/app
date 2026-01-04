@@ -1,6 +1,4 @@
 package com.security.appdetector
-import kotlinx.coroutines.withContext
-import android.provider.ContactsContract
 
 import android.accounts.Account
 import android.accounts.AccountManager
@@ -17,9 +15,11 @@ import com.security.appdetector.util.GmailHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Activity for scanning Gmail inbox for phishing emails
+ * Uses Gmail API via GmailHelper
  */
 class GmailPhishingActivity : AppCompatActivity() {
 
@@ -159,21 +159,25 @@ class GmailPhishingActivity : AppCompatActivity() {
         
         binding.scanProgress.visibility = View.VISIBLE
         binding.emptyStateText.visibility = View.GONE
+        binding.scanSummaryText.visibility = View.GONE
+        binding.scanInboxButton.isEnabled = false
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Fetch real emails from Gmail
+                // Fetch real emails from Gmail API
                 val emails = fetchRealGmailEmails()
                 
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     binding.scanProgress.visibility = View.GONE
+                    binding.scanInboxButton.isEnabled = true
+                    
                     emailResults.clear()
                     emailResults.addAll(emails)
                     emailAdapter.notifyDataSetChanged()
                     
                     if (emailResults.isEmpty()) {
                         binding.emptyStateText.visibility = View.VISIBLE
-                        binding.emptyStateText.text = "No emails found or no phishing detected"
+                        binding.emptyStateText.text = "No emails found or API access restricted.\nCheck internet and permissions."
                     } else {
                         val phishingCount = emailResults.count { it.isPhishing }
                         binding.scanSummaryText.text = "Found $phishingCount potentially phishing email(s) out of ${emailResults.size} scanned"
@@ -181,8 +185,9 @@ class GmailPhishingActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     binding.scanProgress.visibility = View.GONE
+                    binding.scanInboxButton.isEnabled = true
                     Toast.makeText(this@GmailPhishingActivity, "Error scanning emails: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
@@ -190,49 +195,10 @@ class GmailPhishingActivity : AppCompatActivity() {
     }
 
     /**
-     * Fetch real Gmail emails using available Android APIs
-     * Note: Full Gmail API requires OAuth2 setup which needs app registration
-     * This uses a simplified approach that works with device accounts
+     * Fetch real Gmail emails using Gmail API via Helper
      */
-    private suspend fun fetchRealGmailEmails(): List<EmailScanResult> = withContext(Dispatchers.IO) {
-        val emails = mutableListOf<EmailScanResult>()
-        
-        try {
-            // Get email content from device (simplified approach)
-            // Full implementation would use Gmail API with OAuth2
-            val account = gmailAccount ?: return@withContext emails
-            
-            // For now, we'll check for phishing patterns in common email sources
-            // In production, implement full Gmail API:
-            // val service = Gmail.Builder(...).build()
-            // val messages = service.users().messages().list("me").setMaxResults(50).execute()
-            
-            // Since full Gmail API requires complex OAuth2 setup,
-            // we'll use a practical approach: scan recent emails from device's email content provider
-            // This is a placeholder - replace with actual Gmail API implementation when OAuth2 is configured
-            
-            // Try to get emails from content provider (limited access)
-            val cursor = contentResolver.query(
-                ContactsContract.CommonDataKinds.Email.CONTENT_URI,
-                arrayOf(ContactsContract.CommonDataKinds.Email.DATA),
-                null,
-                null,
-                null
-            )
-            
-            // Note: This is a fallback - real Gmail inbox requires Gmail API with OAuth2
-            // The app needs to be registered in Google Cloud Console with Gmail API enabled
-            // For now, return empty list to indicate API needs proper setup
-            
-            cursor?.close()
-            
-        } catch (e: Exception) {
-            android.util.Log.e("GmailPhishingActivity", "Error fetching emails: ${e.message}")
-        }
-        
-        // Return empty list - requires Gmail API OAuth2 setup for full functionality
-        // User will see "No emails found" message
-        emails
+    private suspend fun fetchRealGmailEmails(): List<EmailScanResult> {
+        val account = gmailAccount ?: return emptyList()
+        return GmailHelper.fetchGmailEmails(this, account)
     }
 }
-
