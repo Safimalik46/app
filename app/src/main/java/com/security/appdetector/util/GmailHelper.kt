@@ -133,8 +133,8 @@ object GmailHelper {
                         
                         val snippet = fullMessage.snippet ?: ""
                         
-                        // Basic phishing detection logic
-                        val isPhishing = checkForPhishing(subject, sender, snippet)
+                        // Use PhishingDetector for more sophisticated analysis
+                        val (isPhishing, reasons) = PhishingDetector.detectPhishing(subject, sender, snippet)
                         
                         results.add(EmailScanResult(
                             id = message.id,
@@ -143,7 +143,8 @@ object GmailHelper {
                             preview = snippet,
                             date = date,
                             isPhishing = isPhishing,
-                            threatLevel = if (isPhishing) "HIGH" else "LOW"
+                            threatLevel = if (isPhishing) "HIGH" else "LOW",
+                            phishingReasons = reasons
                         ))
                         
                     } catch (e: Exception) {
@@ -158,31 +159,5 @@ object GmailHelper {
         }
         
         results
-    }
-    
-    /**
-     * Simple phishing detection logic
-     */
-    private fun checkForPhishing(subject: String, sender: String, body: String): Boolean {
-        val suspiciousKeywords = listOf(
-            "verify your account", "urgent action required", "suspicious activity",
-            "account suspended", "lottery winner", "inheritance", "bank transfer",
-            "password expiration", "unusual sign-in"
-        )
-        
-        val content = "$subject $sender $body".lowercase()
-        
-        // Check for suspicious keywords
-        if (suspiciousKeywords.any { content.contains(it) }) {
-            return true
-        }
-        
-        // Check for mismatched sender domains for known services (simplified)
-        if (content.contains("paypal") && !sender.lowercase().contains("paypal.com")) return true
-        if (content.contains("google") && !sender.lowercase().contains("google.com")) return true
-        if (content.contains("apple") && !sender.lowercase().contains("apple.com")) return true
-        if (content.contains("bank") && sender.lowercase().contains("gmail.com")) return true // Banks usually don't use gmail
-        
-        return false
     }
 }

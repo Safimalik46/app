@@ -11,7 +11,8 @@ import com.security.appdetector.model.EmailScanResult
  * Adapter for displaying email scan results
  */
 class EmailAdapter(
-    private val emails: List<EmailScanResult>
+    private val emails: List<EmailScanResult>,
+    private val onItemClick: (EmailScanResult) -> Unit
 ) : RecyclerView.Adapter<EmailAdapter.EmailViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EmailViewHolder {
@@ -32,6 +33,12 @@ class EmailAdapter(
     inner class EmailViewHolder(
         private val binding: ItemEmailBinding
     ) : RecyclerView.ViewHolder(binding.root) {
+
+        init {
+            binding.root.setOnClickListener {
+                onItemClick(emails[adapterPosition])
+            }
+        }
 
         fun bind(email: EmailScanResult) {
             binding.subjectText.text = email.subject
@@ -55,4 +62,3 @@ class EmailAdapter(
         }
     }
 }
-

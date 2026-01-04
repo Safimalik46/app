@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.security.appdetector.adapter.EmailAdapter
@@ -48,7 +49,11 @@ class GmailPhishingActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        emailAdapter = EmailAdapter(emailResults)
+        emailAdapter = EmailAdapter(emailResults) { email ->
+            if (email.isPhishing) {
+                showPhishingDetails(email)
+            }
+        }
         binding.emailsRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.emailsRecyclerView.adapter = emailAdapter
     }
@@ -120,7 +125,7 @@ class GmailPhishingActivity : AppCompatActivity() {
             
             if (gmailAccount == null) {
                 // Show dialog to help user add account
-                androidx.appcompat.app.AlertDialog.Builder(this)
+                AlertDialog.Builder(this)
                     .setTitle("No Google Account Found")
                     .setMessage("To use Gmail phishing detection, please:\n\n" +
                             "1. Go to Settings > Accounts\n" +
@@ -152,6 +157,7 @@ class GmailPhishingActivity : AppCompatActivity() {
     }
 
     private fun scanGmailInbox() {
+        checkGmailAccount()
         if (gmailAccount == null) {
             Toast.makeText(this, "Please connect Gmail account first", Toast.LENGTH_SHORT).show()
             return
@@ -200,5 +206,14 @@ class GmailPhishingActivity : AppCompatActivity() {
     private suspend fun fetchRealGmailEmails(): List<EmailScanResult> {
         val account = gmailAccount ?: return emptyList()
         return GmailHelper.fetchGmailEmails(this, account)
+    }
+
+    private fun showPhishingDetails(email: EmailScanResult) {
+        val reasons = email.phishingReasons.joinToString("\n- ")
+        AlertDialog.Builder(this)
+            .setTitle("Phishing Details")
+            .setMessage("Subject: ${email.subject}\n\nSender: ${email.sender}\n\nReasons why this email is suspicious:\n- $reasons")
+            .setPositiveButton("OK", null)
+            .show()
     }
 }
