@@ -13,6 +13,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        multiDexEnabled = true // Keep multidex enabled
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -86,14 +87,18 @@ dependencies {
     
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")
-    
-    // Gmail API
-    implementation("com.google.api-client:google-api-client-android:2.2.0")
-    implementation("com.google.apis:google-api-services-gmail:v1-rev20220404-2.0.0")
+
+    // Google API BOM for version alignment
+    implementation(platform("com.google.http-client:google-http-client-bom:1.44.2"))
     implementation("com.google.auth:google-auth-library-oauth2-http:1.19.0")
     
+    // Gmail API (BOM does not cover api-client, so version is specified)
+    implementation("com.google.api-client:google-api-client-android:2.2.0")
+    implementation("com.google.apis:google-api-services-gmail:v1-rev20220404-2.0.0")
+    implementation("com.google.http-client:google-http-client-android")
+
     // Gemini AI
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation("com.google.ai.client.generativeai:generativeai:0.4.0")
     
     // Testing
     testImplementation("junit:junit:4.13.2")

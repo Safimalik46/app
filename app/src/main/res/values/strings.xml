@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">AI App Detector</string>
     <string name="app_tagline">Smart AI Security for Your Apps</string>
-    
+    <string name="server_client_id">905195188626-blffoktdhbflp0qvdv5nfneifabo1uj7.apps.googleusercontent.com</string>
     <!-- Splash Screen -->
     <string name="splash_loading">Loading Security Scanner…</string>
     

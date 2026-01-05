@@ -42,16 +42,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.antivirusButton.setOnClickListener {
-            animateButtonClick(binding.antivirusButton) {
-                val intent = Intent(this, AntivirusActivity::class.java)
-                startActivity(intent)
-            }
-        }
-        
         binding.fileScanButton.setOnClickListener {
             animateButtonClick(binding.fileScanButton) {
-                val intent = Intent(this, FileScanActivity::class.java)
+                val intent = Intent(this, FileCleanerActivity::class.java)
                 startActivity(intent)
             }
         }
@@ -101,7 +94,6 @@ class MainActivity : AppCompatActivity() {
         // Animate buttons from bottom
         val buttons = listOf(
             binding.scanButton,
-            binding.antivirusButton,
             binding.fileScanButton,
             binding.gmailScanButton,
             binding.chatbotButton,
@@ -211,4 +203,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-

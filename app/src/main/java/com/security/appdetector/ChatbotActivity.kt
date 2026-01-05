@@ -156,8 +156,13 @@ class ChatbotActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     hideTypingIndicator()
+                    val detailedError = when (e) {
+                        is java.io.IOException -> "Network error. Please check your internet connection."
+                        is IllegalStateException -> "API key issue. Please check your Gemini API key in Settings."
+                        else -> "An unexpected error occurred. Please try again later."
+                    }
                     val errorMessage = ChatMessage(
-                        message = "❌ Error: ${e.message}. Please check your internet connection and API key.",
+                        message = "❌ Error: $detailedError\nDetails: ${e.message}",
                         isUser = false,
                         timestamp = System.currentTimeMillis()
                     )

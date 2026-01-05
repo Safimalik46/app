@@ -6,6 +6,7 @@ import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * Gemini API integration for AI-powered security analysis
@@ -35,28 +36,23 @@ object GeminiSecurityApi {
      * Chat with Gemini
      */
     suspend fun chatWithGemini(context: Context, userMessage: String): String? {
-        val apiKey = getApiKey(context) ?: return null
+        val apiKey = getApiKey(context) ?: throw IllegalStateException("Gemini API Key not configured.")
         
         return withContext(Dispatchers.IO) {
-            try {
-                val generativeModel = GenerativeModel(
-                    modelName = MODEL_NAME,
-                    apiKey = apiKey
-                )
+            val generativeModel = GenerativeModel(
+                modelName = MODEL_NAME,
+                apiKey = apiKey
+            )
 
-                val chat = generativeModel.startChat(
-                    history = listOf(
-                        content(role = "user") { text("You are a helpful cybersecurity assistant for Android mobile security. Answer concisely.") },
-                        content(role = "model") { text("I understand. I am a cybersecurity assistant ready to help with Android security questions.") }
-                    )
+            val chat = generativeModel.startChat(
+                history = listOf(
+                    content(role = "user") { text("You are a helpful cybersecurity assistant for Android mobile security. Answer concisely.") },
+                    content(role = "model") { text("I understand. I am a cybersecurity assistant ready to help with Android security questions.") }
                 )
+            )
 
-                val response = chat.sendMessage(userMessage)
-                response.text
-            } catch (e: Exception) {
-                Log.e("GeminiSecurityApi", "Error chatting with Gemini: ${e.message}")
-                null
-            }
+            val response = chat.sendMessage(userMessage)
+            response.text?.takeIf { it.isNotBlank() } ?: throw IOException("Received an empty response from the AI.")
         }
     }
 
@@ -70,52 +66,47 @@ object GeminiSecurityApi {
         permissions: List<String>,
         dangerousPermissions: List<String>
     ): AISecurityAnalysis? {
-        val apiKey = getApiKey(context) ?: return null
+        val apiKey = getApiKey(context) ?: throw IllegalStateException("Gemini API Key not configured.")
 
         return withContext(Dispatchers.IO) {
-            try {
-                val generativeModel = GenerativeModel(
-                    modelName = MODEL_NAME,
-                    apiKey = apiKey
-                )
+            val generativeModel = GenerativeModel(
+                modelName = MODEL_NAME,
+                apiKey = apiKey
+            )
 
-                val prompt = """
-                    Analyze the security risk of this Android app and provide a detailed assessment.
-                    
-                    App Name: $appName
-                    Package: $packageName
-                    Total Permissions: ${permissions.size}
-                    Dangerous Permissions Count: ${dangerousPermissions.size}
-                    
-                    Dangerous Permissions List:
-                    ${dangerousPermissions.joinToString("\n")}
-                    
-                    Please provide:
-                    1. Risk Level (SAFE, RISKY, or MALWARE)
-                    2. Security Score (0-100)
-                    3. Key Security Concerns
-                    4. Recommendations
-                    
-                    Respond ONLY with valid JSON format:
-                    {
-                        "riskLevel": "SAFE|RISKY|MALWARE",
-                        "securityScore": 85,
-                        "concerns": ["concern1", "concern2"],
-                        "recommendations": ["recommendation1", "recommendation2"]
-                    }
-                """.trimIndent()
+            val prompt = """
+                Analyze the security risk of this Android app and provide a detailed assessment.
+                
+                App Name: $appName
+                Package: $packageName
+                Total Permissions: ${permissions.size}
+                Dangerous Permissions Count: ${dangerousPermissions.size}
+                
+                Dangerous Permissions List:
+                ${dangerousPermissions.joinToString("\n")}
+                
+                Please provide:
+                1. Risk Level (SAFE, RISKY, or MALWARE)
+                2. Security Score (0-100)
+                3. Key Security Concerns
+                4. Recommendations
+                
+                Respond ONLY with valid JSON format:
+                {
+                    "riskLevel": "SAFE|RISKY|MALWARE",
+                    "securityScore": 85,
+                    "concerns": ["concern1", "concern2"],
+                    "recommendations": ["recommendation1", "recommendation2"]
+                }
+            """.trimIndent()
 
-                val response = generativeModel.generateContent(prompt)
-                val responseText = response.text ?: return@withContext null
-                
-                // Clean up markdown code blocks if present
-                val jsonText = responseText.replace("```json", "").replace("```", "").trim()
-                
-                parseSecurityAnalysis(jsonText)
-            } catch (e: Exception) {
-                Log.e("GeminiSecurityApi", "Error analyzing app: ${e.message}")
-                null
-            }
+            val response = generativeModel.generateContent(prompt)
+            val responseText = response.text ?: throw IOException("Received an empty response from the AI for app analysis.")
+            
+            // Clean up markdown code blocks if present
+            val jsonText = responseText.replace("```json", "").replace("```", "").trim()
+            
+            parseSecurityAnalysis(jsonText)
         }
     }
 
@@ -134,7 +125,7 @@ object GeminiSecurityApi {
             )
         } catch (e: Exception) {
             Log.e("GeminiSecurityApi", "Parse error: ${e.message}")
-            null
+            throw IOException("Failed to parse AI response.", e)
         }
     }
 
